@@ -1,0 +1,33 @@
+syntax = "proto3";
+package core;
+option go_package = "database/proto/type";
+import "google/protobuf/timestamp.proto";
+
+message Block {
+  uint64 index = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  repeated Transaction transactions = 3;
+  bytes validator = 4;
+  bytes prev_hash = 5;
+  bytes hash = 6;
+  bytes state_root = 7;
+}
+
+message Account {
+  bytes address = 1;
+  uint64 balance = 2;
+  uint64 stake = 3;
+  uint64 nonce = 4;
+}
+
+message Transaction {
+  bytes from = 1;
+  bytes to = 2;
+  uint64 amount = 3;
+  uint64 fee = 4;
+  uint64 nonce = 5;
+  uint64 gas_limit = 6;
+  uint64 gas_price = 7;
+  bytes signature = 8;
+  bytes public_key = 9;
+}
