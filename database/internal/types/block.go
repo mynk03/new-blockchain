@@ -3,6 +3,10 @@ package types
 import (
 	pb "blockchain_simulator/database/internal/core/pb"
 	"crypto/ecdsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/pem"
+	"errors"
 	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -116,12 +120,47 @@ func (t *Transaction) FromProto(pbTx *pb.Transaction) error {
 	return nil
 }
 
+func (t *Transaction) Hash() []byte {
+	// Create a hash of the transaction data
+	hash := sha256.New()
+	hash.Write(t.From)
+	hash.Write(t.To)
+	hash.Write([]byte{byte(t.Amount)})
+	hash.Write([]byte{byte(t.Fee)})
+	hash.Write([]byte{byte(t.Nonce)})
+	hash.Write([]byte{byte(t.GasLimit)})
+	hash.Write([]byte{byte(t.GasPrice)})
+	return hash.Sum(nil)
+}
+
 func SerializePublicKey(pub *ecdsa.PublicKey) ([]byte, error) {
-	// TODO: Implement public key serialization
-	return []byte{}, nil
+	if pub == nil {
+		return nil, errors.New("public key is nil")
+	}
+	der, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		return nil, err
+	}
+	block := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: der,
+	}
+	return pem.EncodeToMemory(block), nil
 }
 
 func ParsePublicKey(data []byte) (*ecdsa.PublicKey, error) {
-	// TODO: Implement public key parsing
-	return &ecdsa.PublicKey{}, nil
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return nil, errors.New("failed to decode PEM block containing public key")
+	}
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	switch pub := pub.(type) {
+	case *ecdsa.PublicKey:
+		return pub, nil
+	default:
+		return nil, errors.New("not ECDSA public key")
+	}
 }

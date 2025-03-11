@@ -2,6 +2,8 @@ package core
 
 import (
 	"blockchain_simulator/database/internal/types"
+	"crypto/sha256"
+	"encoding/json"
 	"errors"
 )
 
@@ -33,12 +35,10 @@ func (bc *Blockchain) GetBlock(hash []byte) (*types.Block, error) {
 }
 
 func (bc *Blockchain) updateState(block *types.Block) error {
-	// Implement state transition logic
 	transactions := block.Transactions
 	accounts := make(map[string]*types.Account)
 
 	for _, tx := range transactions {
-		// Fetch accounts from storage
 		fromAcc, err := bc.storage.GetAccount(tx.From)
 		if err != nil {
 			return err
@@ -49,7 +49,28 @@ func (bc *Blockchain) updateState(block *types.Block) error {
 		}
 		accounts[string(tx.From)] = fromAcc
 		accounts[string(tx.To)] = toAcc
+
+		// Update balances
+		fromAcc.Balance -= tx.Amount + tx.Fee
+		toAcc.Balance += tx.Amount
+
+		// Update nonces
+		fromAcc.Nonce++
 	}
+
+	// Store updated accounts
+	for _, acc := range accounts {
+		if err := bc.storage.PutAccount(acc); err != nil {
+			return err
+		}
+	}
+
+	// Calculate and update state root
+	stateRoot, err := bc.CalculateStateRoot()
+	if err != nil {
+		return err
+	}
+	block.StateRoot = stateRoot
 
 	return nil
 }
@@ -60,6 +81,20 @@ func isGenesisBlock(block *types.Block) bool {
 		return false
 	}
 	return true
+}
+
+func (bc *Blockchain) CalculateStateRoot() ([]byte, error) {
+	// TODO: Implement proper Merkle Patricia Trie
+	// For now, return a simple hash of all account states
+	accounts := make([]*types.Account, 0)
+	// Get all accounts and create a hash
+	hash := sha256.New()
+	jsonData, err := json.Marshal(accounts)
+	if err != nil {
+		return nil, err
+	}
+	hash.Write(jsonData)
+	return hash.Sum(nil), nil
 }
 
 // func (bc *Blockchain) GetLatestBlock() (*types.Block, error) {
