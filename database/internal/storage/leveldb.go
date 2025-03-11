@@ -87,6 +87,44 @@ func (l *LevelDBStorage) GetAccount(address []byte) (*types.Account, error) {
 	return account, nil
 }
 
+func (l *LevelDBStorage) PutTransaction(tx *types.Transaction) error {
+	pbTx := tx.ToProto()
+	data, err := proto.Marshal(pbTx)
+	if err != nil {
+		return err
+	}
+
+	txKey := bytes.Join([][]byte{txPrefix, tx.Hash()}, nil)
+	return l.db.Put(txKey, data, nil)
+}
+
+func (l *LevelDBStorage) GetTransaction(txHash []byte) (*types.Transaction, error) {
+	txKey := bytes.Join([][]byte{txPrefix, txHash}, nil)
+	data, err := l.db.Get(txKey, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var pbTx pb.Transaction
+	if err := proto.Unmarshal(data, &pbTx); err != nil {
+		return nil, err
+	}
+
+	tx := &types.Transaction{}
+	if err := tx.FromProto(&pbTx); err != nil {
+		return nil, err
+	}
+	return tx, nil
+}
+
+func (l *LevelDBStorage) GetLatestBlock() (*types.Block, error) {
+	hash, err := l.db.Get(latestBlockKey, nil)
+	if err != nil {
+		return nil, err
+	}
+	return l.GetBlock(hash)
+}
+
 func (l *LevelDBStorage) Close() error {
 	return l.db.Close()
 }

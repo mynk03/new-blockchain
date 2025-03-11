@@ -20,5 +20,6 @@ func (sm *StateManager) UpdateAccount(account *types.Account) error {
 
 func (sm *StateManager) CalculateStateRoot() ([]byte, error) {
 	// Implement Merkle Patricia Trie logic
+	// Placeholder implementation
 	return []byte{}, nil
 }
