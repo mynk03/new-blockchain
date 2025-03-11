@@ -1,5 +1,10 @@
 # Storage System Documentation
 
+## Implementation Achievements
+- Successfully implemented LevelDB-based persistent storage with protobuf serialization for blocks, accounts, and transactions
+- Established a clean storage interface abstraction allowing for easy extension to other storage backends
+- Implemented efficient key-value storage with proper prefixing and batch operations for atomic updates
+
 ## Overview
 The storage system implements a persistent storage layer for the blockchain simulator using LevelDB. It handles three main types of data: Blocks, Accounts, and Transactions.
 
@@ -61,7 +66,7 @@ The storage system implements a persistent storage layer for the blockchain simu
    - Account is deserialized from protobuf format
    - Account state is returned
 
-### Transaction Storage
+### Transaction Storage - [mem_pool]
 1. When storing a transaction:
    - Transaction is serialized to protobuf format
    - Transaction is stored with prefix 't' + transaction hash
