@@ -2,7 +2,8 @@ package validator
 
 import (
 	"blockchain-simulator/blockchain"
-	"blockchain-simulator/transactions"
+	"blockchain-simulator/storage"
+	"blockchain-simulator/types"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -12,12 +13,12 @@ import (
 // Validator struct to manage transaction validation and block addition
 type Validator struct {
 	Address         common.Address
-	TransactionPool *transactions.TransactionPool
+	TransactionPool *storage.TransactionPool
 	LocalChain      *blockchain.Blockchain
 }
 
 // NewValidator creates a new Validator instance
-func NewValidator(address common.Address, tp *transactions.TransactionPool, bc *blockchain.Blockchain) *Validator {
+func NewValidator(address common.Address, tp *storage.TransactionPool, bc *blockchain.Blockchain) *Validator {
 	return &Validator{
 		Address:         address,
 		TransactionPool: tp,
@@ -26,7 +27,7 @@ func NewValidator(address common.Address, tp *transactions.TransactionPool, bc *
 }
 
 // AddTransaction validates and adds a transaction to the transaction pool
-func (v *Validator) AddTransaction(tx transactions.Transaction) error {
+func (v *Validator) AddTransaction(tx types.Transaction) error {
 	// Validate transaction with current state
 	if status, err := tx.ValidateWithState(v.LocalChain.StateTrie); !status {
 		logrus.WithFields(logrus.Fields{
@@ -49,12 +50,12 @@ func (v *Validator) AddTransaction(tx transactions.Transaction) error {
 }
 
 // ProposeBlock validates and adds transactions from the transaction pool to the blockchain
-func (v *Validator) ProposeNewBlock() blockchain.Block {
+func (v *Validator) ProposeNewBlock() types.Block {
 	// Get all pending transaction from the transaction pool
 	pendingTxs := v.TransactionPool.GetPendingTransactions()
 	// Create a new block with the valid transaction
 	prevBlock := v.LocalChain.GetLatestBlock()
-	newBlock := blockchain.CreateBlock(pendingTxs, prevBlock)
+	newBlock := types.CreateBlock(pendingTxs, prevBlock)
 
 	fmt.Println("here state trie before processing block", v.LocalChain.StateTrie.RootHash())
 	// process the transaction on the validator 's state trie
@@ -68,8 +69,7 @@ func (v *Validator) ProposeNewBlock() blockchain.Block {
 	return newBlock
 }
 
-func (v *Validator) ValidateBlock(block blockchain.Block) bool {
-
+func (v *Validator) ValidateBlock(block types.Block) bool {
 	// Check block linkage
 	if block.PrevHash == block.Hash || block.Index == v.LocalChain.LastBlockNumber {
 		return false

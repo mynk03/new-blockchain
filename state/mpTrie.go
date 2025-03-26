@@ -70,3 +70,12 @@ func (t *MptTrie) Copy() *MptTrie {
 		Trie:  t.Trie,
 	}
 }
+
+// GetBalance returns the balance of an account
+func (m *MptTrie) GetBalance(address common.Address) uint64 {
+	account, err := m.GetAccount(address)
+	if err != nil {
+		return 0
+	}
+	return account.Balance
+}
