@@ -84,3 +84,13 @@ func (v *Validator) ValidateBlock(block blockchain.Block) bool {
 		return true
 	}
 }
+
+// GetAddress returns the validator's address
+func (v *Validator) GetAddress() common.Address {
+	return v.Address
+}
+
+// HasTransaction checks if a transaction exists in the pool
+func (v *Validator) HasTransaction(hash string) bool {
+	return v.TransactionPool.HasTransaction(hash)
+}

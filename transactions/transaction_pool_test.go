@@ -109,14 +109,16 @@ func (suite *TransactionPoolTestSuite) TestAddTransaction() {
 	tx1 := randomTransaction()
 	err := suite.tp.AddTransaction(tx1)
 	suite.NoError(err)
-	suite.Contains(suite.tp.PendingTransactions, tx1)
+	pendingTxs := suite.tp.GetPendingTransactions()
+	suite.Contains(pendingTxs, tx1)
 }
 
 func (suite *TransactionPoolTestSuite) TestAddInvalidTransaction() {
 	txInvalid := Transaction{TransactionHash: "invalid"}
 	err := suite.tp.AddTransaction(txInvalid)
 	suite.Error(err)
-	suite.NotContains(suite.tp.PendingTransactions, txInvalid)
+	pendingTxs := suite.tp.GetPendingTransactions()
+	suite.NotContains(pendingTxs, txInvalid)
 }
 
 func (suite *TransactionPoolTestSuite) TestRemoveTransaction() {
@@ -137,12 +139,14 @@ func (suite *TransactionPoolTestSuite) TestRemoveTransaction() {
 	suite.Equal("transaction hash not found", err.Error())
 
 	// Add transaction to pool
-	suite.tp.PendingTransactions = append(suite.tp.PendingTransactions, tx)
+	err = suite.tp.AddTransaction(tx)
+	suite.NoError(err)
 
 	// Test removing existing transaction
 	err = suite.tp.RemoveTransaction(tx.TransactionHash)
 	suite.NoError(err)
-	suite.Len(suite.tp.PendingTransactions, 0)
+	pendingTxs := suite.tp.GetPendingTransactions()
+	suite.Len(pendingTxs, 0)
 
 	// Test removing same transaction again
 	err = suite.tp.RemoveTransaction(tx.TransactionHash)
@@ -160,7 +164,8 @@ func (suite *TransactionPoolTestSuite) TestRemoveBulkTransactions() {
 	// Generate hashes and add to pool
 	for _, tx := range txs {
 		tx.TransactionHash = tx.GenerateHash()
-		suite.tp.PendingTransactions = append(suite.tp.PendingTransactions, tx)
+		err := suite.tp.AddTransaction(tx)
+		suite.NoError(err)
 	}
 
 	// Test removing multiple transactions
@@ -178,7 +183,8 @@ func (suite *TransactionPoolTestSuite) TestRemoveBulkTransactions() {
 	suite.tp.RemoveBulkTransactions(hashes)
 
 	// Verify transactions were removed
-	suite.Len(suite.tp.PendingTransactions, 0)
+	pendingTxs := suite.tp.GetPendingTransactions()
+	suite.Len(pendingTxs, 0)
 
 	// Verify log output contains error for non-existent transaction
 	logString := logBuffer.String()
@@ -190,7 +196,8 @@ func (suite *TransactionPoolTestSuite) TestRemoveBulkTransactionsWithEmptyPool()
 	// Test removing transactions from empty pool
 	hashes := []string{"hash1", "hash2"}
 	suite.tp.RemoveBulkTransactions(hashes)
-	suite.Len(suite.tp.PendingTransactions, 0)
+	pendingTxs := suite.tp.GetPendingTransactions()
+	suite.Len(pendingTxs, 0)
 }
 
 func (suite *TransactionPoolTestSuite) TestRemoveBulkTransactionsWithPartialSuccess() {
@@ -204,7 +211,8 @@ func (suite *TransactionPoolTestSuite) TestRemoveBulkTransactionsWithPartialSucc
 		Timestamp:   1234567890,
 	}
 	tx.TransactionHash = tx.GenerateHash()
-	suite.tp.PendingTransactions = append(suite.tp.PendingTransactions, tx)
+	err := suite.tp.AddTransaction(tx)
+	suite.NoError(err)
 
 	// Test removing mix of existing and non-existing transactions
 	hashes := []string{
@@ -220,7 +228,8 @@ func (suite *TransactionPoolTestSuite) TestRemoveBulkTransactionsWithPartialSucc
 	suite.tp.RemoveBulkTransactions(hashes)
 
 	// Verify existing transaction was removed
-	suite.Len(suite.tp.PendingTransactions, 0)
+	pendingTxs := suite.tp.GetPendingTransactions()
+	suite.Len(pendingTxs, 0)
 
 	// Verify log output contains error for non-existent transaction
 	logString := logBuffer.String()

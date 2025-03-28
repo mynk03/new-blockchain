@@ -5,49 +5,86 @@ package transactions
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/slices"
 )
 
-// TransactionPool manages the lifecycle of transactions, including tracking pending and processed transactions.
+var (
+	ErrDuplicateTransaction = errors.New("transaction already exists in pool")
+)
+
+// TransactionPool represents a pool of pending transactions
 type TransactionPool struct {
-	PendingTransactions []Transaction // List of transactions that are yet to be confirmed or finalized.
+	transactions map[string]Transaction
+	mu           sync.RWMutex
 }
 
-// NewTransactionPool initializes a new TransactionPool
+// NewTransactionPool creates a new transaction pool
 func NewTransactionPool() *TransactionPool {
-
-	transactionPool := &TransactionPool{
-		PendingTransactions: []Transaction{},
+	return &TransactionPool{
+		transactions: make(map[string]Transaction),
 	}
-
-	return transactionPool
 }
 
-// AddTransaction adds a transaction to the PendingTransactions and AllTransactions
-func (tp *TransactionPool) AddTransaction(tx Transaction) error {
+// AddTransaction adds a transaction to the pool
+func (pool *TransactionPool) AddTransaction(tx Transaction) error {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	// Validate transaction
 	if status, err := tx.Validate(); !status {
-		return errors.New("invalid transaction error: " + err.Error())
+		return err
 	}
-	tp.PendingTransactions = append(tp.PendingTransactions, tx)
+
+	// Check if transaction already exists
+	if _, exists := pool.transactions[tx.TransactionHash]; exists {
+		return ErrDuplicateTransaction
+	}
+
+	pool.transactions[tx.TransactionHash] = tx
 	return nil
 }
 
-// RemoveTransaction removes a transaction from the PendingTransactions
-func (tp *TransactionPool) RemoveTransaction(hash string) error {
-	found := false
-	for i, tx := range tp.PendingTransactions {
-		if tx.TransactionHash == hash {
-			tp.PendingTransactions = slices.Delete(tp.PendingTransactions, i, i+1)
-			found = true
-			break
-		}
+// GetTransaction retrieves a transaction by its hash
+func (pool *TransactionPool) GetTransaction(hash string) (Transaction, bool) {
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
+	tx, exists := pool.transactions[hash]
+	return tx, exists
+}
+
+// RemoveTransaction removes a transaction from the pool
+func (pool *TransactionPool) RemoveTransaction(hash string) error {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	if _, exists := pool.transactions[hash]; !exists {
+		return errors.New("transaction not found")
 	}
-	if !found {
-		return errors.New("transaction hash not found")
-	}
+
+	delete(pool.transactions, hash)
 	return nil
+}
+
+// GetAllTransactions returns all transactions in the pool
+func (pool *TransactionPool) GetAllTransactions() []Transaction {
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
+
+	txs := make([]Transaction, 0, len(pool.transactions))
+	for _, tx := range pool.transactions {
+		txs = append(txs, tx)
+	}
+	return txs
+}
+
+// HasTransaction checks if a transaction exists in the pool
+func (pool *TransactionPool) HasTransaction(hash string) bool {
+	pool.mu.RLock()
+	defer pool.mu.RUnlock()
+	_, exists := pool.transactions[hash]
+	return exists
 }
 
 // RemoveBulkTransactions removes multiple transactions from the PendingTransactions
@@ -66,15 +103,14 @@ func (tp *TransactionPool) RemoveBulkTransactions(hashes []string) {
 
 // GetPendingTransactions returns the PendingTransactions
 func (tp *TransactionPool) GetPendingTransactions() []Transaction {
-	return tp.PendingTransactions
+	return tp.GetAllTransactions()
 }
 
 // GetTransactionByHash returns a transaction by hash
 func (tp *TransactionPool) GetTransactionByHash(hash string) *Transaction {
-	for _, tx := range tp.PendingTransactions {
-		if tx.TransactionHash == hash {
-			return &tx
-		}
+	tx, exists := tp.GetTransaction(hash)
+	if exists {
+		return &tx
 	}
 	return nil
 }
