@@ -2,20 +2,20 @@ package blockchain
 
 import (
 	state "blockchain-simulator/state"
-	"blockchain-simulator/transactions"
+	"blockchain-simulator/transaction"
 
 	"github.com/ethereum/go-ethereum/common"
 )
 
 // Block represents a block in the blockchain.
 type Block struct {
-	Index        uint64                     // Block height
-	Timestamp    string                     // Time of creation
-	Transactions []transactions.Transaction // Transactions in the block
-	PrevHash     string                     // Hash of the previous block
-	Hash         string                     // Hash of the current block
-	StateRoot    string                     // Root hash of the state trie after applying transactions
-	Validator    string                     // Address of the validator who created the block (for PoS)
+	Index        uint64                    // Block height
+	Timestamp    string                    // Time of creation
+	Transactions []transaction.Transaction // Transactions in the block
+	PrevHash     string                    // Hash of the previous block
+	Hash         string                    // Hash of the current block
+	StateRoot    string                    // Root hash of the state trie after applying transactions
+	Validator    string                    // Address of the validator who created the block (for PoS)
 }
 
 // Blockchain represents the entire chain.
